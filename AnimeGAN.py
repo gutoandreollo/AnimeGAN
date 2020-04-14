@@ -53,12 +53,12 @@ class AnimeGAN(object) :
         self.sample_dir = os.path.join(args.sample_dir, self.model_dir)
         check_folder(self.sample_dir)
 
-        self.real = tf.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch], name='real_A')
-        self.anime = tf.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch], name='anime_A')
-        self.anime_smooth = tf.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch], name='anime_smooth_A')
-        self.test_real = tf.placeholder(tf.float32, [1, None, None, self.img_ch], name='test_real_A')
+        self.real = tf.compat.v1.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch], name='real_A')
+        self.anime = tf.compat.v1.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch], name='anime_A')
+        self.anime_smooth = tf.compat.v1.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch], name='anime_smooth_A')
+        self.test_real = tf.compat.v1.placeholder(tf.float32, [1, None, None, self.img_ch], name='test_real_A')
 
-        self.anime_gray = tf.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch],name='anime_B')
+        self.anime_gray = tf.compat.v1.placeholder(tf.float32, [self.batch_size, self.img_size[0], self.img_size[1], self.img_ch],name='anime_B')
 
 
         self.real_image_generator = ImageGenerator('./dataset/train_photo', self.img_size, self.batch_size)

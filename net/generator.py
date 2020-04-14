@@ -69,7 +69,7 @@ def Unsample(inputs, filters, kernel_size=3):
         plumb through a "training" argument
         '''
     new_H, new_W = 2 * tf.shape(inputs)[1], 2 * tf.shape(inputs)[2]
-    inputs = tf.image.resize_images(inputs, [new_H, new_W])
+    inputs = tf.image.resize(inputs, [new_H, new_W])
 
     return Separable_conv2d(filters=filters, kernel_size=kernel_size, inputs=inputs)
 
@@ -95,7 +95,7 @@ class G_net(object):
 
     def __init__(self, inputs):
 
-        with tf.variable_scope('G_MODEL'):
+        with tf.compat.v1.variable_scope('G_MODEL'):
 
             with tf.variable_scope('b1'):
                 inputs = Conv2DNormLReLU(inputs, 64)
