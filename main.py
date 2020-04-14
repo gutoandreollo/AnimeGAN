@@ -1,9 +1,6 @@
 from AnimeGAN import AnimeGAN
 import argparse
 from utils import *
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
 
 """parsing and configuration"""
 
@@ -89,8 +86,8 @@ def main():
 
     # open session
     tf.device('/device:GPU:0')
-    gpu_options = tf.GPUOptions(allow_growth=True)
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,inter_op_parallelism_threads=8,
+    gpu_options = tf.compat.v1.GPUOptions(allow_growth=True)
+    with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(allow_soft_placement=True,inter_op_parallelism_threads=8,
                                intra_op_parallelism_threads=8,gpu_options=gpu_options)) as sess:
         gan = AnimeGAN(sess, args)
 
