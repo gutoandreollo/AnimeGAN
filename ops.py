@@ -16,7 +16,7 @@ weight_regularizer = None
 ##################################################################################
 
 def conv(x, channels, kernel=4, stride=2, pad=0, pad_type='zero', use_bias=True, sn=False, scope='conv_0'):
-    with tf.variable_scope(scope):
+    with tf.compat.v1.variable_scope(scope):
         if (kernel - stride) % 2 == 0 :
             pad_top = pad
             pad_bottom = pad
@@ -40,7 +40,7 @@ def conv(x, channels, kernel=4, stride=2, pad=0, pad_type='zero', use_bias=True,
             x = tf.nn.conv2d(input=x, filter=spectral_norm(w),
                              strides=[1, stride, stride, 1], padding='VALID')
             if use_bias :
-                bias = tf.get_variable("bias", [channels], initializer=tf.constant_initializer(0.0))
+                bias = tf.compat.v1.get_variable("bias", [channels], initializer=tf.constant_initializer(0.0))
                 x = tf.nn.bias_add(x, bias)
 
         else :
@@ -53,15 +53,15 @@ def conv(x, channels, kernel=4, stride=2, pad=0, pad_type='zero', use_bias=True,
         return x
 
 def deconv(x, channels, kernel=4, stride=2, use_bias=True, sn=False, scope='deconv_0'):
-    with tf.variable_scope(scope):
+    with tf.compat.v1.variable_scope(scope):
         x_shape = x.get_shape().as_list()
         output_shape = [x_shape[0], tf.shape(x)[1]*stride, tf.shape(x)[2]*stride, channels]
         if sn :
-            w = tf.get_variable("kernel", shape=[kernel, kernel, channels, x.get_shape()[-1]], initializer=weight_init, regularizer=weight_regularizer)
+            w = tf.compat.v1.get_variable("kernel", shape=[kernel, kernel, channels, x.get_shape()[-1]], initializer=weight_init, regularizer=weight_regularizer)
             x = tf.nn.conv2d_transpose(x, filter=spectral_norm(w), output_shape=output_shape, strides=[1, stride, stride, 1], padding='SAME')
 
             if use_bias :
-                bias = tf.get_variable("bias", [channels], initializer=tf.constant_initializer(0.0))
+                bias = tf.compat.v1.get_variable("bias", [channels], initializer=tf.constant_initializer(0.0))
                 x = tf.nn.bias_add(x, bias)
 
         else :
@@ -77,13 +77,13 @@ def deconv(x, channels, kernel=4, stride=2, use_bias=True, sn=False, scope='deco
 ##################################################################################
 
 def resblock(x_init, channels, use_bias=True, scope='resblock_0'):
-    with tf.variable_scope(scope):
-        with tf.variable_scope('res1'):
+    with tf.compat.v1.variable_scope(scope):
+        with tf.compat.v1.variable_scope('res1'):
             x = conv(x_init, channels, kernel=3, stride=1, pad=1, pad_type='reflect', use_bias=use_bias)
             x = instance_norm(x)
             x = relu(x)
 
-        with tf.variable_scope('res2'):
+        with tf.compat.v1.variable_scope('res2'):
             x = conv(x, channels, kernel=3, stride=1, pad=1, pad_type='reflect', use_bias=use_bias)
             x = instance_norm(x)
 
@@ -140,7 +140,7 @@ def spectral_norm(w, iteration=1):
     w_shape = w.shape.as_list()
     w = tf.reshape(w, [-1, w_shape[-1]])
 
-    u = tf.get_variable("u", [1, w_shape[-1]], initializer=tf.truncated_normal_initializer(), trainable=False)
+    u = tf.compat.v1.get_variable("u", [1, w_shape[-1]], initializer=tf.truncated_normal_initializer(), trainable=False)
 
     u_hat = u
     v_hat = None

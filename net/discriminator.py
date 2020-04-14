@@ -3,7 +3,7 @@ from ops import *
 
 def D_net(x_init,ch, n_dis,sn, scope, reuse):
     channel = ch // 2
-    with tf.variable_scope(scope, reuse=reuse):
+    with tf.compat.v1.variable_scope(scope, reuse=reuse):
         x = conv(x_init, channel, kernel=3, stride=1, pad=1, use_bias=False, sn=sn, scope='conv_0')
         x = lrelu(x, 0.2)
 

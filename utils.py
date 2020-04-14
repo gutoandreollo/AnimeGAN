@@ -71,9 +71,9 @@ def show_all_variables():
 
     slim.model_analyzer.analyze_vars(model_vars, print_info=True)
     print('G:')
-    slim.model_analyzer.analyze_vars([var for var in tf.trainable_variables() if var.name.startswith('generator')], print_info=True)
+    slim.model_analyzer.analyze_vars([var for var in tf.compat.v1.trainable_variables() if var.name.startswith('generator')], print_info=True)
     print('D:')
-    slim.model_analyzer.analyze_vars([var for var in tf.trainable_variables() if var.name.startswith('discriminator')], print_info=True)
+    slim.model_analyzer.analyze_vars([var for var in tf.compat.v1.trainable_variables() if var.name.startswith('discriminator')], print_info=True)
 
 def check_folder(log_dir):
     if not os.path.exists(log_dir):

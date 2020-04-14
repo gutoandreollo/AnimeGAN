@@ -37,12 +37,13 @@ def test(checkpoint_dir,style_name, test_dir, img_size=[256,256]):
     # test_real = tf.placeholder(tf.float32, [1, 256, 256, 3], name='test')
     test_real = tf.placeholder(tf.float32, [1, None, None, 3], name='test')
 
-    with tf.variable_scope("generator", reuse=False):
+    with tf.compat.v1.variable_scope("generator", reuse=False):
         test_generated = generator.G_net(test_real).fake
     saver = tf.train.Saver()
 
-    gpu_options = tf.GPUOptions(allow_growth=True)
-    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)) as sess:
+    tf.device('/device:GPU:0')
+    gpu_options = tf.compat.v1.GPUOptions(allow_growth=True)
+    with tf.compat.v1.Session(config=tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)) as sess:
         # tf.global_variables_initializer().run()
         # load model
         ckpt = tf.train.get_checkpoint_state(checkpoint_dir)  # checkpoint file information

@@ -24,12 +24,12 @@ def Conv2DNormLReLU(inputs, filters, kernel_size=3, strides=1, padding='VALID', 
 def dwise_conv(input, k_h=3, k_w=3, channel_multiplier=1, strides=[1, 1, 1, 1],
                    padding='VALID', stddev=0.02, name='dwise_conv', bias=False):
     input = tf.pad(input, [[0, 0], [1, 1], [1, 1], [0, 0]], mode="REFLECT")
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         in_channel = input.get_shape().as_list()[-1]
         w = tf.compat.v1.get_variable('w', [k_h, k_w, in_channel, channel_multiplier],regularizer=None,initializer=tf.truncated_normal_initializer(stddev=stddev))
         conv = tf.nn.depthwise_conv2d(input, w, strides, padding, rate=None, name=name, data_format=None)
         if bias:
-            biases = tf.get_variable('bias', [in_channel * channel_multiplier],initializer=tf.constant_initializer(0.0))
+            biases = tf.compat.v1.get_variable('bias', [in_channel * channel_multiplier],initializer=tf.constant_initializer(0.0))
             conv = tf.nn.bias_add(conv, biases)
         return conv
 
@@ -97,17 +97,17 @@ class G_net(object):
 
         with tf.compat.v1.variable_scope('G_MODEL'):
 
-            with tf.variable_scope('b1'):
+            with tf.compat.v1.variable_scope('b1'):
                 inputs = Conv2DNormLReLU(inputs, 64)
                 inputs = Conv2DNormLReLU(inputs, 64)
                 inputs = Separable_conv2d(inputs,128,strides=2) + Downsample(inputs, 128)
 
-            with tf.variable_scope('b2'):
+            with tf.compat.v1.variable_scope('b2'):
                 inputs = Conv2DNormLReLU(inputs, 128)
                 inputs = Separable_conv2d(inputs, 128)
                 inputs = Separable_conv2d(inputs, 256, strides=2) + Downsample(inputs, 256)
 
-            with tf.variable_scope('m'):
+            with tf.compat.v1.variable_scope('m'):
                 inputs = Conv2DNormLReLU(inputs, 256)
                 inputs = self.InvertedRes_block(inputs, 2, 256, 1, 'r1')
                 inputs = self.InvertedRes_block(inputs, 2, 256, 1, 'r2')
@@ -118,12 +118,12 @@ class G_net(object):
                 inputs = self.InvertedRes_block(inputs, 2, 256, 1, 'r7')
                 inputs = self.InvertedRes_block(inputs, 2, 256, 1, 'r8')
                 inputs = Conv2DNormLReLU(inputs, 256)
-            with tf.variable_scope('u2'):
+            with tf.compat.v1.variable_scope('u2'):
                 inputs = Unsample(inputs, 128)
                 inputs = Separable_conv2d(inputs, 128)
                 inputs = Conv2DNormLReLU(inputs, 128)
 
-            with tf.variable_scope('u1'):
+            with tf.compat.v1.variable_scope('u1'):
                 inputs = Unsample(inputs,128)    # The number of the filters in this layer is 128 while it is 64 in the graph of the paper. Please refer to the code.
                 inputs = Conv2DNormLReLU(inputs, 64)
                 inputs = Conv2DNormLReLU(inputs, 64)
@@ -134,7 +134,7 @@ class G_net(object):
 
 
     def InvertedRes_block(self, input, expansion_ratio, output_dim, stride, name, reuse=False, bias=None):
-        with  tf.variable_scope(name, reuse=reuse):
+        with  tf.compat.v1.variable_scope(name, reuse=reuse):
             # pw
             bottleneck_dim = round(expansion_ratio * input.get_shape().as_list()[-1])
             net = Conv2DNormLReLU(input, bottleneck_dim, kernel_size=1, Use_bias=bias)
