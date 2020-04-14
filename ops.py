@@ -179,7 +179,7 @@ def L2_loss(x,y):
     return tf.nn.l2_loss(x-y)* 2 / tf.to_float(size)
 
 def Huber_loss(x,y):
-    return tf.losses.huber_loss(x,y)
+    return tf.compat.v1.losses.huber_loss(x,y)
 
 def discriminator_loss(loss_func, real, gray, fake, real_blur):
     real_loss = 0

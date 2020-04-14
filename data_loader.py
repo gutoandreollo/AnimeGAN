@@ -76,6 +76,6 @@ class ImageGenerator(object):
 
         dataset = dataset.batch(self.batch_size)
 
-        img1,img2 = dataset.make_one_shot_iterator().get_next()
+        img1,img2 = tf.compat.v1.make_one_shot_iterator(dataset).get_next()
 
         return img1,img2

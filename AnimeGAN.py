@@ -88,7 +88,7 @@ class AnimeGAN(object) :
 
     def generator(self, x_init, reuse=False, scope="generator"):
 
-        with tf.variable_scope(scope, reuse=reuse) :
+        with tf.compat.v1.variable_scope(scope, reuse=reuse) :
             G = generator.G_net(x_init)
             return G.fake
 
@@ -172,37 +172,37 @@ class AnimeGAN(object) :
         self.Discriminator_loss = d_loss
 
         """ Training """
-        t_vars = tf.trainable_variables()
+        t_vars = tf.compat.v1.trainable_variables()
         G_vars = [var for var in t_vars if 'generator' in var.name]
         D_vars = [var for var in t_vars if 'discriminator' in var.name]
 
-        self.init_optim = tf.train.AdamOptimizer(self.init_lr, beta1=0.5, beta2=0.999).minimize(self.init_loss, var_list=G_vars)
-        self.G_optim = tf.train.AdamOptimizer(self.g_lr , beta1=0.5, beta2=0.999).minimize(self.Generator_loss, var_list=G_vars)
-        self.D_optim = tf.train.AdamOptimizer(self.d_lr , beta1=0.5, beta2=0.999).minimize(self.Discriminator_loss, var_list=D_vars)
+        self.init_optim = tf.compat.v1.train.AdamOptimizer(self.init_lr, beta1=0.5, beta2=0.999).minimize(self.init_loss, var_list=G_vars)
+        self.G_optim = tf.compat.v1.train.AdamOptimizer(self.g_lr , beta1=0.5, beta2=0.999).minimize(self.Generator_loss, var_list=G_vars)
+        self.D_optim = tf.compat.v1.train.AdamOptimizer(self.d_lr , beta1=0.5, beta2=0.999).minimize(self.Discriminator_loss, var_list=D_vars)
 
 
         """" Summary """
-        self.G_loss = tf.summary.scalar("Generator_loss", self.Generator_loss)
-        self.D_loss = tf.summary.scalar("Discriminator_loss", self.Discriminator_loss)
+        self.G_loss = tf.compat.v1.summary.scalar("Generator_loss", self.Generator_loss)
+        self.D_loss = tf.compat.v1.summary.scalar("Discriminator_loss", self.Discriminator_loss)
 
-        self.G_gan = tf.summary.scalar("G_gan", g_loss)
-        self.G_vgg = tf.summary.scalar("G_vgg", t_loss)
-        self.G_init_loss = tf.summary.scalar("G_init", init_loss)
+        self.G_gan = tf.compat.v1.summary.scalar("G_gan", g_loss)
+        self.G_vgg = tf.compat.v1.summary.scalar("G_vgg", t_loss)
+        self.G_init_loss = tf.compat.v1.summary.scalar("G_init", init_loss)
 
-        self.V_loss_merge = tf.summary.merge([self.G_init_loss])
-        self.G_loss_merge = tf.summary.merge([self.G_loss, self.G_gan, self.G_vgg, self.G_init_loss])
-        self.D_loss_merge = tf.summary.merge([self.D_loss])
+        self.V_loss_merge = tf.compat.v1.summary.merge([self.G_init_loss])
+        self.G_loss_merge = tf.compat.v1.summary.merge([self.G_loss, self.G_gan, self.G_vgg, self.G_init_loss])
+        self.D_loss_merge = tf.compat.v1.summary.merge([self.D_loss])
 
 
     def train(self):
         # initialize all variables
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
         # saver to save model
-        self.saver = tf.train.Saver(max_to_keep=self.epoch)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=self.epoch)
 
         # summary writer
-        self.writer = tf.summary.FileWriter(self.log_dir + '/' + self.model_dir, self.sess.graph)
+        self.writer = tf.compat.v1.summary.FileWriter(self.log_dir + '/' + self.model_dir, self.sess.graph)
 
         """ Input Image"""
         real_img_op, anime_img_op, anime_smooth_op  = self.real_image_generator.load_images(), self.anime_image_generator.load_images(), self.anime_smooth_generator.load_images()

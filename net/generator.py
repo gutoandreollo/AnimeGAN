@@ -26,7 +26,7 @@ def dwise_conv(input, k_h=3, k_w=3, channel_multiplier=1, strides=[1, 1, 1, 1],
     input = tf.pad(input, [[0, 0], [1, 1], [1, 1], [0, 0]], mode="REFLECT")
     with tf.variable_scope(name):
         in_channel = input.get_shape().as_list()[-1]
-        w = tf.get_variable('w', [k_h, k_w, in_channel, channel_multiplier],regularizer=None,initializer=tf.truncated_normal_initializer(stddev=stddev))
+        w = tf.compat.v1.get_variable('w', [k_h, k_w, in_channel, channel_multiplier],regularizer=None,initializer=tf.truncated_normal_initializer(stddev=stddev))
         conv = tf.nn.depthwise_conv2d(input, w, strides, padding, rate=None, name=name, data_format=None)
         if bias:
             biases = tf.get_variable('bias', [in_channel * channel_multiplier],initializer=tf.constant_initializer(0.0))
@@ -83,7 +83,7 @@ def Downsample(inputs, filters = 256, kernel_size=3):
         '''
 
     new_H, new_W =  tf.shape(inputs)[1] // 2, tf.shape(inputs)[2] // 2
-    inputs = tf.image.resize_images(inputs, [new_H, new_W])
+    inputs = tf.image.resize(inputs, [new_H, new_W])
 
     return Separable_conv2d(filters=filters, kernel_size=kernel_size, inputs=inputs)
 
