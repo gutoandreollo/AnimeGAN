@@ -23,10 +23,6 @@ def parse_args():
 
     return parser.parse_args()
 
-def stats_graph(graph):
-    flops = tf.profiler.profile(graph, options=tf.profiler.ProfileOptionBuilder.float_operation())
-    # params = tf.profiler.profile(graph, options=tf.profiler.ProfileOptionBuilder.trainable_variables_parameter())
-    print('FLOPs: {}'.format(flops.total_float_ops))
 
 def test(checkpoint_dir,style_name, test_dir, img_size=[256,256]):
     # tf.reset_default_graph()

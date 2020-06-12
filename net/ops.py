@@ -1,6 +1,5 @@
 import tensorflow as tf
 import tensorflow.contrib as tf_contrib
-from vgg19 import Vgg19
 
 # Xavier : tf_contrib.layers.xavier_initializer()
 # He : tf_contrib.layers.variance_scaling_initializer()
@@ -10,6 +9,7 @@ from vgg19 import Vgg19
 
 weight_init = tf.random_normal_initializer(mean=0.0, stddev=0.02)
 weight_regularizer = None
+
 
 ##################################################################################
 # Layer
@@ -49,8 +49,8 @@ def conv(x, channels, kernel=4, stride=2, pad=0, pad_type='zero', use_bias=True,
                                  kernel_regularizer=weight_regularizer,
                                  strides=stride, use_bias=use_bias)
 
-
         return x
+
 
 def deconv(x, channels, kernel=4, stride=2, use_bias=True, sn=False, scope='deconv_0'):
     with tf.compat.v1.variable_scope(scope):
@@ -72,6 +72,72 @@ def deconv(x, channels, kernel=4, stride=2, use_bias=True, sn=False, scope='deco
         return x
 
 
+def conv2d(inputs, filters, kernel_size=3, strides=1, padding='VALID', Use_bias = None):
+    if kernel_size == 3:
+        inputs = tf.pad(inputs, [[0, 0], [1, 1], [1, 1], [0, 0]], mode="REFLECT")
+    return tf.contrib.layers.conv2d(
+        inputs,
+        num_outputs=filters,
+        kernel_size=kernel_size,
+        stride=strides,
+        biases_initializer= Use_bias,
+        normalizer_fn=None,
+        activation_fn=None,
+        padding=padding)
+
+
+def conv2d_norm_lrelu(inputs, filters, kernel_size=3, strides=1, padding='VALID', Use_bias = None):
+    x = conv2d(inputs, filters, kernel_size, strides, padding=padding, Use_bias = Use_bias)
+    x = instance_norm(x,scope=None)
+    return lrelu(x)
+
+
+def dwise_conv(input, k_h=3, k_w=3, channel_multiplier=1, strides=[1, 1, 1, 1],
+               padding='VALID', stddev=0.02, name='dwise_conv', bias=False):
+    input = tf.pad(input, [[0, 0], [1, 1], [1, 1], [0, 0]], mode="REFLECT")
+    with tf.compat.v1.variable_scope(name):
+        in_channel = input.get_shape().as_list()[-1]
+        w = tf.compat.v1.get_variable('w', [k_h, k_w, in_channel, channel_multiplier],regularizer=None,initializer=tf.truncated_normal_initializer(stddev=stddev))
+        conv = tf.nn.depthwise_conv2d(input, w, strides, padding, rate=None, name=name, data_format=None)
+        if bias:
+            biases = tf.compat.v1.get_variable('bias', [in_channel * channel_multiplier],initializer=tf.constant_initializer(0.0))
+            conv = tf.nn.bias_add(conv, biases)
+        return conv
+
+
+def separable_conv2d(inputs, filters, kernel_size=3, strides=1, padding='VALID', Use_bias = None):
+    if kernel_size==3 and strides==1:
+        inputs = tf.pad(inputs, [[0, 0], [1, 1], [1, 1], [0, 0]], mode="REFLECT")
+    if strides == 2:
+        inputs = tf.pad(inputs, [[0, 0], [0, 1], [0, 1], [0, 0]], mode="REFLECT")
+    return tf.contrib.layers.separable_conv2d(
+        inputs,
+        num_outputs=filters,
+        kernel_size=kernel_size,
+        depth_multiplier=1,
+        stride=strides,
+        biases_initializer=Use_bias,
+        normalizer_fn=tf.contrib.layers.instance_norm,
+        activation_fn=lrelu,
+        padding=padding)
+
+
+def conv2d_transpose_lrelu(inputs, filters, kernel_size=2, strides=2, padding='SAME', Use_bias = None):
+    return tf.contrib.layers.conv2d_transpose(inputs,
+                                              num_outputs=filters,
+                                              kernel_size=kernel_size,
+                                              stride=strides,
+                                              biases_initializer=Use_bias,
+                                              normalizer_fn=tf.contrib.layers.instance_norm,
+                                              activation_fn=lrelu,
+                                              padding=padding)
+
+
+def vgg_conv4_4_no_activation(vgg, img):
+    vgg.build(img)
+    return vgg.conv4_4_no_activation
+
+
 ##################################################################################
 # Residual-block
 ##################################################################################
@@ -89,12 +155,32 @@ def resblock(x_init, channels, use_bias=True, scope='resblock_0'):
 
         return x + x_init
 
-##################################################################################
-# Sampling
-##################################################################################
+
+def invresblock(input, expansion_ratio, output_dim, stride, name, reuse=False, bias=None):
+    with  tf.compat.v1.variable_scope(name, reuse=reuse):
+        # pw
+        bottleneck_dim = round(expansion_ratio * input.get_shape().as_list()[-1])
+        net = conv2d_norm_lrelu(input, bottleneck_dim, kernel_size=1, Use_bias=bias)
+
+        # dw
+        net = dwise_conv(net, name=name)
+        net = instance_norm(net,scope='1')
+        net = lrelu(net)
+
+        # pw & linear
+        net = conv2d(net, output_dim, kernel_size=1)
+        net = instance_norm(net,scope='2')
+
+        # element wise add, only for stride==1
+        if (int(input.get_shape().as_list()[-1]) == output_dim) and stride == 1:
+            net = input + net
+
+        return net
+
 
 def flatten(x) :
     return tf.layers.flatten(x)
+
 
 ##################################################################################
 # Activation function
@@ -111,8 +197,10 @@ def relu(x):
 def tanh(x):
     return tf.tanh(x)
 
+
 def sigmoid(x) :
     return tf.sigmoid(x)
+
 
 ##################################################################################
 # Normalization function
@@ -124,10 +212,12 @@ def instance_norm(x, scope='instance_norm'):
                                            center=True, scale=True,
                                            scope=scope)
 
+
 def layer_norm(x, scope='layer_norm') :
     return tf_contrib.layers.layer_norm(x,
                                         center=True, scale=True,
                                         scope=scope)
+
 
 def batch_norm(x, is_training=True, scope='batch_norm'):
     return tf_contrib.layers.batch_norm(x,
@@ -163,8 +253,10 @@ def spectral_norm(w, iteration=1):
 
     return w_norm
 
+
 def l2_norm(v, eps=1e-12):
     return v / (tf.reduce_sum(v ** 2) ** 0.5 + eps)
+
 
 ##################################################################################
 # Loss function
@@ -174,66 +266,15 @@ def L1_loss(x, y):
     loss = tf.reduce_mean(tf.abs(x - y))
     return loss
 
+
 def L2_loss(x,y):
     size = tf.size(x)
     return tf.nn.l2_loss(x-y)* 2 / tf.to_float(size)
 
+
 def Huber_loss(x,y):
     return tf.compat.v1.losses.huber_loss(x,y)
 
-def discriminator_loss(loss_func, real, gray, fake, real_blur):
-    real_loss = 0
-    gray_loss = 0
-    fake_loss = 0
-    real_blur_loss = 0
-
-
-    if loss_func == 'wgan-gp' or loss_func == 'wgan-lp':
-        real_loss = -tf.reduce_mean(real)
-        gray_loss = tf.reduce_mean(gray)
-        fake_loss = tf.reduce_mean(fake)
-        real_blur_loss = tf.reduce_mean(real_blur)
-
-    if loss_func == 'lsgan' :
-        real_loss = tf.reduce_mean(tf.square(real - 1.0))
-        gray_loss = tf.reduce_mean(tf.square(gray))
-        fake_loss = tf.reduce_mean(tf.square(fake))
-        real_blur_loss = tf.reduce_mean(tf.square(real_blur))
-
-    if loss_func == 'gan' or loss_func == 'dragan' :
-        real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(real), logits=real))
-        gray_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(gray), logits=gray))
-        fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(fake), logits=fake))
-        real_blur_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(real_blur), logits=real_blur))
-
-    if loss_func == 'hinge':
-        real_loss = tf.reduce_mean(relu(1.0 - real))
-        gray_loss = tf.reduce_mean(relu(1.0 + gray))
-        fake_loss = tf.reduce_mean(relu(1.0 + fake))
-        real_blur_loss = tf.reduce_mean(relu(1.0 + real_blur))
-
-    loss = real_loss + fake_loss + real_blur_loss * 0.1 + gray_loss
-
-    return loss
-
-def generator_loss(loss_func, fake):
-    fake_loss = 0
-
-    if loss_func == 'wgan-gp' or loss_func == 'wgan-lp':
-        fake_loss = -tf.reduce_mean(fake)
-
-    if loss_func == 'lsgan' :
-        fake_loss = tf.reduce_mean(tf.square(fake - 1.0))
-
-    if loss_func == 'gan' or loss_func == 'dragan':
-        fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(fake), logits=fake))
-
-    if loss_func == 'hinge':
-        fake_loss = -tf.reduce_mean(fake)
-
-    loss = fake_loss
-
-    return loss
 
 def gram(x):
     shape_x = tf.shape(x)
@@ -242,44 +283,10 @@ def gram(x):
     x = tf.reshape(x, [b, -1, c])
     return tf.matmul(tf.transpose(x, [0, 2, 1]), x) / tf.cast((tf.size(x) // b), tf.float32)
 
-def con_loss(vgg, real, fake):
 
-    vgg.build(real)
-    real_feature_map = vgg.conv4_4_no_activation
-
-    vgg.build(fake)
-    fake_feature_map = vgg.conv4_4_no_activation
-
-    loss = L1_loss(real_feature_map, fake_feature_map)
-
-    return loss
-
-
-def style_loss(style, fake):
-    return L1_loss(gram(style), gram(fake))
-
-def con_sty_loss(vgg, real, anime, fake):
-
-    vgg.build(real)
-    real_feature_map = vgg.conv4_4_no_activation
-
-    vgg.build(fake)
-    fake_feature_map = vgg.conv4_4_no_activation
-
-    vgg.build(anime[:fake_feature_map.shape[0]])
-    anime_feature_map = vgg.conv4_4_no_activation
-
-    c_loss = L1_loss(real_feature_map, fake_feature_map)
-    s_loss = style_loss(anime_feature_map, fake_feature_map)
-
-    return c_loss,s_loss
-
-def color_loss(con, fake):
-    con = rgb2yuv(con)
-    fake = rgb2yuv(fake)
-
-    return L1_loss(con[:,:,:,0], fake[:,:,:,0]) + Huber_loss(con[:,:,:,1],fake[:,:,:,1]) + Huber_loss(con[:,:,:,2],fake[:,:,:,2])
-
+##################################################################################
+# Image manipulation
+##################################################################################
 
 def rgb2yuv(rgb):
     """
@@ -294,4 +301,33 @@ def rgb2yuv(rgb):
     # temp = tf.nn.bias_add(temp, rgb2yuv_bias)
     # return temp
     return tf.image.rgb_to_yuv(rgb)
+
+
+def unsample(inputs, filters, kernel_size=3):
+    '''
+        An alternative to transposed convolution where we first resize, then convolve.
+        See http://distill.pub/2016/deconv-checkerboard/
+        For some reason the shape needs to be statically known for gradient propagation
+        through tf.image.resize_images, but we only know that for fixed image size, so we
+        plumb through a "training" argument
+        '''
+    new_H, new_W = 2 * tf.shape(inputs)[1], 2 * tf.shape(inputs)[2]
+    inputs = tf.image.resize(inputs, [new_H, new_W])
+
+    return separable_conv2d(filters=filters, kernel_size=kernel_size, inputs=inputs)
+
+
+def downsample(inputs, filters = 256, kernel_size=3):
+    '''
+        An alternative to transposed convolution where we first resize, then convolve.
+        See http://distill.pub/2016/deconv-checkerboard/
+        For some reason the shape needs to be statically known for gradient propagation
+        through tf.image.resize_images, but we only know that for fixed image size, so we
+        plumb through a "training" argument
+        '''
+
+    new_H, new_W =  tf.shape(inputs)[1] // 2, tf.shape(inputs)[2] // 2
+    inputs = tf.image.resize(inputs, [new_H, new_W])
+
+    return separable_conv2d(filters=filters, kernel_size=kernel_size, inputs=inputs)
 

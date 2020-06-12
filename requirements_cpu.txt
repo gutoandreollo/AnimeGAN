@@ -1,0 +1,6 @@
+numpy
+scipy
+opencv-python
+tensorflow-cpu==1.15
+tqdm
+python-benedict

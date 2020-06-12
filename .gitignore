@@ -1,0 +1,9 @@
+data/datasets/
+data/checkpoints/
+data/vgg19.npy
+
+.idea/
+.venv/
+venv/
+
+__pycache__/
